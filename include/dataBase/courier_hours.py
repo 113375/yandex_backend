@@ -5,7 +5,7 @@ from sqlalchemy import orm
 
 
 class CourierHours(SqlAlchemyBase, SerializerMixin):
-    """Класс таблицы с регионами"""
+    """Класс, объеденяющий курьера и его рабочик часы(многие ко многим)"""
     __tablename__ = 'courier_hours'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     courier_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("courier.courier_id"))

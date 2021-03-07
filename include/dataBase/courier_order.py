@@ -4,10 +4,10 @@ import sqlalchemy
 from sqlalchemy import orm
 
 
-class CourierRegion(SqlAlchemyBase, SerializerMixin):
-    """Класс, объединяющий район и курьера(многие ко многим)"""
-    __tablename__ = 'courier_region'
+class CourierOrder(SqlAlchemyBase, SerializerMixin):
+    """Класс, объединяющий район с заказом"""
+    __tablename__ = 'courier_order'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
 
     courier_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("courier.courier_id"), nullable=False)
-    region_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("region.id"), nullable=False)
+    order_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("order.id"), nullable=False)

@@ -5,9 +5,9 @@ from sqlalchemy import orm
 
 
 class CourierType(SqlAlchemyBase, SerializerMixin):
-    """Класс таблицы с регионами"""
+    """Класс типов курьера"""
     __tablename__ = 'courier_type'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     name = sqlalchemy.Column(sqlalchemy.String, nullable=False)
 
-    weight = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+    max_weight = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)

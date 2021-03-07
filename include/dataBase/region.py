@@ -5,6 +5,7 @@ from sqlalchemy import orm
 
 
 class Region(SqlAlchemyBase, SerializerMixin):
+    """Класс таблицы с районами"""
     __tablename__ = 'region'
 
     id = sqlalchemy.Column(sqlalchemy.Integer,

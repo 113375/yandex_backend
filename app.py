@@ -12,8 +12,8 @@ def add_types():
     data = {"foot": 10, "bike": 15, "car": 50}
     if not db_sess.query(CourierType).first():
         for i in data.keys():
-            if not CourierType(name=i, weight=data[i]) in db_sess:
-                db_sess.add(CourierType(name=i, weight=data[i]))
+            if not CourierType(name=i, max_weight=data[i]) in db_sess:
+                db_sess.add(CourierType(name=i, max_weight=data[i]))
                 db_sess.commit()
 
 
