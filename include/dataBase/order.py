@@ -10,3 +10,4 @@ class Order(SqlAlchemyBase, SerializerMixin):
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     region_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("region.id"), nullable=False)
     weight = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+    completed = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
