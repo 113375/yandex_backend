@@ -11,3 +11,13 @@ class Order(SqlAlchemyBase, SerializerMixin):
     region_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("region.id"), nullable=False)
     weight = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     completed = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
+
+    table_for_courier = sqlalchemy.Table(
+        'courier_order',
+        SqlAlchemyBase.metadata,
+        sqlalchemy.Column('courier', sqlalchemy.Integer,
+                          sqlalchemy.ForeignKey('courier.courier_id')),
+        sqlalchemy.Column('order', sqlalchemy.Integer,
+                          sqlalchemy.ForeignKey('order.id'))
+    )
+
