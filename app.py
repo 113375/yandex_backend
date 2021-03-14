@@ -5,7 +5,6 @@ from include.dataBase.courier_type import CourierType
 
 app = Flask(__name__)
 
-
 def add_types():
     """Автоматическое добавление типов курьера"""
     db_sess = db_session.create_session()

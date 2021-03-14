@@ -23,14 +23,6 @@ def add_courier_regions(person, db_sess, courier_id):
             db_sess.add(Region(name=region))
             db_sess.commit()
 
-    for region_name in person['regions']:
-        """Соединение курьера с районом"""
-        region_id = db_sess.query(Region).filter(Region.name == region_name).first().id
-        if not db_sess.query(CourierRegion).filter(CourierRegion.courier_id == courier_id).filter(
-                CourierRegion.region_id == region_id).first():
-            db_sess.add(CourierRegion(courier_id=courier_id, region_id=region_id))
-            db_sess.commit()
-
 
 def add_courier_hours(person, db_sess, courier_id):
     """Добавление рабочих часов курьеру"""
@@ -58,6 +50,7 @@ def add_courier():
                    ['courier_id', 'courier_type', 'regions', 'working_hours']):
             try:
                 """Добавление курьера в базу данных"""
+
                 courier_type = db_sess.query(CourierType).filter(CourierType.name == person['courier_type']).first().id
 
                 db_sess.add(Courier(courier_id=person['courier_id'],
@@ -65,6 +58,11 @@ def add_courier():
                                     rating=0,
                                     earnings=0))  # добавляем курьера в базу данных
                 add_courier_regions(person, db_sess, person['courier_id'])
+
+                courier = db_sess.query(Courier).filter(Courier.courier_id == person['courier_id']).first()
+                courier.regions = person['regions']
+
+
                 add_courier_hours(person, db_sess, person['courier_id'])
                 db_sess.commit()
                 good.append({"id": person['courier_id']})
@@ -88,52 +86,47 @@ def add_courier():
     }), "201 Created")
 
 
-# @blueprint.route('/couriers/<courier_id>', methods=['PATCH'])
-# def change_courier(courier_id):
-#     """Обновление информации о курьере"""
-#     if not request.json:
-#         """В случае отсутствия параметров"""
-#         return make_response(jsonify({'error': 'Empty request'}), 400)
-#
-#     data = request.json
-#     db_sess = db_session.create_session()
-#     if not db_sess.query(Courier).filter(Courier.courier_id == courier_id).first():
-#         """В случае отсутствия курьера с таким id"""
-#         return make_response(jsonify({'error': 'Non-existent courier'}), 400)
-#
-#     if any(key in data for key in ['courier_type', 'regions', 'working_hours']):
-#
-#         courier = db_sess.query(Courier).filter(Courier.courier_id == courier_id).first()
-#         if 'courier_type' in data:
-#             courier.courier_type = db_sess.query(CourierType).filter(
-#                 CourierType.name == data['courier_type']).first().id
-#             db_sess.commit()
-#         if 'regions' in data:
-#             db_sess.query(CourierRegion).filter(CourierRegion.courier_id == courier_id).delete()
-#             add_courier_regions(data, db_sess, courier_id)
-#             db_sess.commit()
-#         if 'working_hours' in data:
-#             db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).delete()
-#             add_courier_hours(data, db_sess, courier_id)
-#             db_sess.commit()
-#
-#         regions_id = db_sess.query(CourierRegion).filter(CourierRegion.courier_id == courier_id).all()
-#         regions_id = [i.region_id for i in regions_id]
-#         regions = db_sess.query(Region).filter(Region.id.in_(regions_id)).all()
-#         regions = [i.name for i in regions]
-#
-#         hours = db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).all()
-#         hours = ["-".join(
-#             [":".join([str(i.begin.hour), str(i.begin.minute)]), ":".join([str(i.end.hour), str(i.end.minute)])]) for i
-#             in
-#             hours]
-#         return make_response(jsonify({"courier_id": courier_id,
-#                                       "courier_type": db_sess.query(CourierType).filter(
-#                                           CourierType.id == courier.courier_type).first().name,
-#                                       "regions": list(map(int, regions)),
-#                                       "working_hours": hours}), 200)
-#     else:
-#         return make_response(jsonify({'error': 'Empty request'}), 400)
+@blueprint.route('/couriers/<courier_id>', methods=['PATCH'])
+def change_courier(courier_id):
+    """Обновление информации о курьере"""
+    if not request.json:
+        """В случае отсутствия параметров"""
+        return make_response(jsonify({'error': 'Empty request'}), 400)
+
+    data = request.json
+    db_sess = db_session.create_session()
+    if not db_sess.query(Courier).filter(Courier.courier_id == courier_id).first():
+        """В случае отсутствия курьера с таким id"""
+        return make_response(jsonify({'error': 'Non-existent courier'}), 400)
+
+    if any(key in data for key in ['courier_type', 'regions', 'working_hours']):
+
+        courier = db_sess.query(Courier).filter(Courier.courier_id == courier_id).first()
+        if 'courier_type' in data:
+            courier.courier_type = db_sess.query(CourierType).filter(
+                CourierType.name == data['courier_type']).first().id
+            db_sess.commit()
+        # if 'regions' in data:
+        #     courier.regions = data['regions']
+        #     db_sess.commit()
+        if 'working_hours' in data:
+            db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).delete()
+            add_courier_hours(data, db_sess, courier_id)
+            db_sess.commit()
+
+
+        hours = db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).all()
+        hours = ["-".join(
+            [":".join([str(i.begin.hour), str(i.begin.minute)]), ":".join([str(i.end.hour), str(i.end.minute)])]) for i
+            in
+            hours]
+        return make_response(jsonify({"courier_id": courier_id,
+                                      "courier_type": db_sess.query(CourierType).filter(
+                                          CourierType.id == courier.courier_type).first().name,
+                                      "regions": courier.regions,
+                                      "working_hours": hours}), 200)
+    else:
+        return make_response(jsonify({'error': 'Empty request'}), 400)
 
 
 @blueprint.route('/orders', methods=['POST'])
