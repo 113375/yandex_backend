@@ -1,10 +1,12 @@
 from flask import Flask
+from waitress import serve
+
 from api import blueprint
 from include import db_session
 from include.dataBase.courier_type import CourierType
-from waitress import serve
 
 app = Flask(__name__)
+
 
 def add_types():
     """Автоматическое добавление типов курьера"""
@@ -17,12 +19,17 @@ def add_types():
                 db_sess.commit()
 
 
+@app.route("/")
+def index():
+    return "<p>проверка</p>"
+
+
 def main():
     db_session.global_init("db/data.db")
     app.register_blueprint(blueprint)
     add_types()
     # app.run(port=8080)
-    serve(app, host="0.0.0.0", port=8080)
+    serve(app, port=8080)
 
 
 if __name__ == '__main__':
