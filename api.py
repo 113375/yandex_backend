@@ -33,7 +33,6 @@ def add_courier_hours(person, db_sess, courier_id):
         begin = datetime.time(hour=int(begin.split(":")[0]), minute=int(begin.split(":")[1]))
         end = datetime.time(hour=int(end.split(":")[0]), minute=int(end.split(":")[1]))
         db_sess.add(CourierHours(courier_id=courier_id, begin=begin, end=end))
-        db_sess.commit()
 
 
 def add_order_hours(order, db_sess, order_id):
@@ -44,7 +43,6 @@ def add_order_hours(order, db_sess, order_id):
         begin = datetime.time(hour=int(begin.split(":")[0]), minute=int(begin.split(":")[1]))
         end = datetime.time(hour=int(end.split(":")[0]), minute=int(end.split(":")[1]))
         db_sess.add(OrderHours(order_id=order_id, begin=begin, end=end))
-        db_sess.commit()
 
 
 @blueprint.route('/couriers', methods=['POST'])
@@ -80,7 +78,6 @@ def add_courier():
                     courier.regions.append(region)
 
                 add_courier_hours(person, db_sess, person['courier_id'])
-                db_sess.commit()
                 good.append({"id": person['courier_id']})
             except Exception as e:
                 """В случае непредвиденной ошибки"""
@@ -97,6 +94,7 @@ def add_courier():
             f"validation_error": {
                 "couriers": bad
             }}), 400)
+    db_sess.commit()
     return make_response(jsonify({
         "couriers": good
     }), 201)
@@ -121,12 +119,10 @@ def change_courier(courier_id):
         if 'courier_type' in data:
             courier.courier_type = db_sess.query(CourierType).filter(
                 CourierType.name == data['courier_type']).first().id
-            db_sess.commit()
         if 'regions' in data:
             regions = courier.regions.copy()
             for j in regions:
                 """Удалям старые районы"""
-                print(len(courier.regions))
                 courier.regions.remove(j)
 
             for i in data['regions']:
@@ -134,16 +130,15 @@ def change_courier(courier_id):
                 add_courier_regions(data, db_sess, i)
                 region = db_sess.query(Region).filter(Region.name == i).first()
                 courier.regions.append(region)
-            db_sess.commit()
         if 'working_hours' in data:
             db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).delete()
             add_courier_hours(data, db_sess, courier_id)
-            db_sess.commit()
 
         hours = db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).all()
         hours = ["-".join(
             [":".join([str(i.begin.hour), str(i.begin.minute)]), ":".join([str(i.end.hour),
                                                                            str(i.end.minute)])]) for i in hours]
+        db_sess.commit()
         return make_response(jsonify({"courier_id": courier_id,
                                       "courier_type": db_sess.query(CourierType).filter(
                                           CourierType.id == courier.courier_type).first().name,
@@ -173,7 +168,6 @@ def add_orders():
                                   region_id=db_sess.query(Region).filter(Region.name == order['region']).first().id,
                                   completed=False
                                   ))
-                db_sess.commit()
                 add_order_hours(order, db_sess, order['order_id'])
                 good.append({"id": order['order_id']})
             except Exception as e:
@@ -191,6 +185,21 @@ def add_orders():
             f"validation_error": {
                 "orders": bad
             }}), 400)
+    db_sess.commit()
     return make_response(jsonify({
         "orders": good
     }), 201)
+
+
+@blueprint.route('/orders/assign', methods=['POST'])
+def assign_orders():
+    if not request.json:
+        """В случае отсутствия параметров"""
+        return make_response(jsonify({'error': 'Empty request'}), 400)
+
+    db_sess = db_session.create_session()
+    data = request.json
+    if "courier_id" in request.json and not db_sess.query(Courier).filter(
+            Courier.courier_id == data['courier_id']).first():
+        """Проверка на наличие нужного курьера в базе данных"""
+        return make_response(jsonify({'error': 'Non-existent courier'}), 400)

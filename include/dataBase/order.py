@@ -12,7 +12,7 @@ class Order(SqlAlchemyBase, SerializerMixin):
     weight = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     completed = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
 
-    table_for_courier = sqlalchemy.Table(
+    courier = sqlalchemy.Table(
         'courier_order',
         SqlAlchemyBase.metadata,
         sqlalchemy.Column('courier', sqlalchemy.Integer,
