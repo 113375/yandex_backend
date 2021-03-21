@@ -16,7 +16,7 @@ blueprint = flask.Blueprint(
 )
 
 
-def add_courier_regions(person, db_sess, courier_id):
+def add_region(person, db_sess):
     """Функция для соединения в базе данных курьера с его районами"""
     for region in person['regions']:
         """Добавление района в таблицу с районами, если его там не было до этого"""
@@ -67,7 +67,7 @@ def add_courier():
                                     courier_type=courier_type,
                                     rating=0,
                                     earnings=0))  # добавляем курьера в базу данных
-                add_courier_regions(person, db_sess, person['courier_id'])
+                add_region(person, db_sess)
 
                 """__________Добавление районов в базу данных_________"""
 
@@ -127,7 +127,7 @@ def change_courier(courier_id):
 
             for i in data['regions']:
                 """Заменяем на новые"""
-                add_courier_regions(data, db_sess, i)
+                add_region(data, db_sess)
                 region = db_sess.query(Region).filter(Region.name == i).first()
                 courier.regions.append(region)
         if 'working_hours' in data:
@@ -163,6 +163,10 @@ def add_orders():
                    ['order_id', 'weight', 'region', 'delivery_hours']):
             try:
                 """Создание заказа"""
+                if not db_sess.query(Region).filter(Region.name == order['region']).first():
+                    db_sess.add(Region(name=order['region']))
+                    db_sess.commit()
+
                 db_sess.add(Order(id=order['order_id'],
                                   weight=order['weight'],
                                   region_id=db_sess.query(Region).filter(Region.name == order['region']).first().id,
@@ -203,3 +207,8 @@ def assign_orders():
             Courier.courier_id == data['courier_id']).first():
         """Проверка на наличие нужного курьера в базе данных"""
         return make_response(jsonify({'error': 'Non-existent courier'}), 400)
+
+    orders = db_sess.query(Order).filter(Order.completed == 0).all()
+
+
+
