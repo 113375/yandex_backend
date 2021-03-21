@@ -164,9 +164,12 @@ def add_orders():
             try:
                 """Создание заказа"""
                 if not db_sess.query(Region).filter(Region.name == order['region']).first():
+                    """Если нет района, то добавляем его """
                     db_sess.add(Region(name=order['region']))
                     db_sess.commit()
-
+                if db_sess.query(Order).filter(Order.id == order['order_id']).first():
+                    """Если id уже существует"""
+                    return make_response(jsonify({'error': 'already existing id'}), 400)
                 db_sess.add(Order(id=order['order_id'],
                                   weight=order['weight'],
                                   region_id=db_sess.query(Region).filter(Region.name == order['region']).first().id,
