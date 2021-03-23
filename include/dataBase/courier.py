@@ -23,14 +23,3 @@ class Courier(SqlAlchemyBase, SerializerMixin):
     orders = orm.relation("Order",
                           secondary="courier_order",
                           backref="order")
-
-    courier = sqlalchemy.Table(
-        'courier_delivery',
-        SqlAlchemyBase.metadata,
-        sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, autoincrement=True),
-        sqlalchemy.Column('courier_id', sqlalchemy.Integer,
-                          sqlalchemy.ForeignKey('courier.courier_id')),
-        sqlalchemy.Column("begin", sqlalchemy.DateTime, nullable=False),
-        sqlalchemy.Column("end", sqlalchemy.DateTime, nullable=True),
-        sqlalchemy.Column("finished", sqlalchemy.Boolean, default=False)
-    )

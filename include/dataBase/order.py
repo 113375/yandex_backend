@@ -20,6 +20,4 @@ class Order(SqlAlchemyBase, SerializerMixin):
         sqlalchemy.Column('order', sqlalchemy.Integer,
                           sqlalchemy.ForeignKey('order.id'))
     )
-
-
-
+    batch = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("batch.id"), nullable=True)

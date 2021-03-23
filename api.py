@@ -1,5 +1,7 @@
 import flask
 from flask import request, jsonify, make_response
+
+from func import add_region, add_courier_hours, check_time, add_order_hours
 from include import db_session
 from include.dataBase.courier import Courier
 from include.dataBase.courier_type import CourierType
@@ -7,6 +9,7 @@ from include.dataBase.region import Region
 from include.dataBase.courier_hours import CourierHours
 from include.dataBase.order_hours import OrderHours
 from include.dataBase.order import Order
+from include.dataBase.batch import Batch
 import datetime
 
 blueprint = flask.Blueprint(
@@ -14,35 +17,6 @@ blueprint = flask.Blueprint(
     __name__,
     template_folder='templates'
 )
-
-
-def add_region(person, db_sess):
-    """Функция для соединения в базе данных курьера с его районами"""
-    for region in person['regions']:
-        """Добавление района в таблицу с районами, если его там не было до этого"""
-        if not db_sess.query(Region).filter(Region.name == region).first():
-            db_sess.add(Region(name=region))
-            db_sess.commit()
-
-
-def add_courier_hours(person, db_sess, courier_id):
-    """Добавление рабочих часов курьеру"""
-    hours = person['working_hours']
-    for string in hours:
-        begin, end = string.split("-")
-        begin = datetime.time(hour=int(begin.split(":")[0]), minute=int(begin.split(":")[1]))
-        end = datetime.time(hour=int(end.split(":")[0]), minute=int(end.split(":")[1]))
-        db_sess.add(CourierHours(courier_id=courier_id, begin=begin, end=end))
-
-
-def add_order_hours(order, db_sess, order_id):
-    """Добавление рабочих часов курьеру"""
-    hours = order['delivery_hours']
-    for string in hours:
-        begin, end = string.split("-")
-        begin = datetime.time(hour=int(begin.split(":")[0]), minute=int(begin.split(":")[1]))
-        end = datetime.time(hour=int(end.split(":")[0]), minute=int(end.split(":")[1]))
-        db_sess.add(OrderHours(order_id=order_id, begin=begin, end=end))
 
 
 @blueprint.route('/couriers', methods=['POST'])
@@ -60,6 +34,9 @@ def add_courier():
                    ['courier_id', 'courier_type', 'regions', 'working_hours']):
             try:
                 """Добавление курьера в базу данных"""
+                if db_sess.query(Courier).filter(Courier.courier_id == person['courier_id']).first():
+                    """Если id уже существует"""
+                    return make_response(jsonify({'error': 'already existing id'}), 400)
 
                 courier_type = db_sess.query(CourierType).filter(CourierType.name == person['courier_type']).first().id
 
@@ -211,7 +188,35 @@ def assign_orders():
         """Проверка на наличие нужного курьера в базе данных"""
         return make_response(jsonify({'error': 'Non-existent courier'}), 400)
 
-    orders = db_sess.query(Order).filter(Order.completed == 0).all()
+    """Отбираем все незанятые и незавершенные заказы"""
 
+    orders = db_sess.query(Order).filter(Order.completed == 0).filter(Order.batch == None).all()
 
+    """Курьер"""
+    courier = db_sess.query(Courier).filter(Courier.courier_id == data['courier_id']).first()
 
+    """Время доставки курьером"""
+    courier_times = db_sess.query(CourierHours).filter(CourierHours.courier_id == courier.courier_id).all()
+
+    """все регионы курьера"""
+    courier_regions = [i.id for i in courier.regions]  # список id районов доставки этого курьера
+
+    """Максимальные вес всех заказов"""
+    max_weight = db_sess.query(CourierType).filter(CourierType.id == courier.courier_type).first().max_weight
+
+    chosen_orders = []
+    weight = 0
+    # if db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first():
+    #     weight = db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first().weight
+
+    for order in orders:
+        times = db_sess.query(OrderHours).filter(OrderHours.order_id == order.id).all()
+        if check_time(courier_times,
+                      times) and order.region_id in courier_regions and weight + order.weight <= max_weight:
+            chosen_orders.append({"id": order.id})
+            weight += order.weight
+
+    return make_response(jsonify({
+        "orders": chosen_orders,
+        "assign_time": datetime.datetime.now()
+    }))
