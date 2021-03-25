@@ -12,3 +12,4 @@ class Batch(SqlAlchemyBase, SerializerMixin):
     assign_time = sqlalchemy.Column(sqlalchemy.DateTime, nullable=False)
     finish_time = sqlalchemy.Column(sqlalchemy.DateTime, nullable=True)
     all_weight = sqlalchemy.Column(sqlalchemy.Float, default=0)
+

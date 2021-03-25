@@ -206,17 +206,32 @@ def assign_orders():
 
     chosen_orders = []
     weight = 0
-    # if db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first():
-    #     weight = db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first().weight
+
+    if db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first():
+        weight = db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first().all_weight
 
     for order in orders:
         times = db_sess.query(OrderHours).filter(OrderHours.order_id == order.id).all()
         if check_time(courier_times,
                       times) and order.region_id in courier_regions and weight + order.weight <= max_weight:
-            chosen_orders.append({"id": order.id})
+            chosen_orders.append(order)
             weight += order.weight
 
+    if not db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first():
+        db_sess.add(Batch(courier_id=courier.courier_id, assign_time=datetime.datetime.now(), all_weight=weight))
+    batch = db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first()
+    for order in chosen_orders:
+        """Добавляем id доставки к заказу"""
+        order.batch = batch.id
+    db_sess.commit()
+    chosen_orders_ids = []
+    for order in db_sess.query(Order).filter(Order.batch == batch.id).filter(Order.completed == 0).all():
+        chosen_orders_ids.append({"id": order.id})
+    if not chosen_orders_ids:
+        return make_response(jsonify({
+            "orders": chosen_orders_ids,
+        }))
     return make_response(jsonify({
-        "orders": chosen_orders,
-        "assign_time": datetime.datetime.now()
+        "orders": chosen_orders_ids,
+        "assign_time": batch.assign_time
     }))
