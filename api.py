@@ -271,15 +271,17 @@ def complete_orders():
     batch = db_sess.query(Batch).filter(order.batch == Batch.id).first()
     if batch.courier_id != data['courier_id']:
         return make_response(jsonify({'error': "Order not from this courier"}), 400)
+    if order.completed:
+        return make_response(jsonify({'error': "Order has been delivered"}), 400)
 
     """Добавляем дату выполнения заказа"""
     order.completed = True
-    data['complete_time'] = datetime.datetime.strptime(data['complete_time'], "%Y-%m-%dT%H:%M:%SZ")
+    data['complete_time'] = datetime.datetime.strptime(data['complete_time'][0:-4], "%Y-%m-%dT%H:%M:%S")
     order.complete_time = data['complete_time']
 
     if len(db_sess.query(Order).filter(Order.batch == order.batch).filter(Order.completed == 0).all()) == 0:
         """Если в партии уже больше нет заказов, то отмечаем ее выполненной"""
-        order.batch.finish_time = data['complete_time']
+        batch.finish_time = data['complete_time']
 
     db_sess.commit()
 
