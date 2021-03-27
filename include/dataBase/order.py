@@ -11,13 +11,5 @@ class Order(SqlAlchemyBase, SerializerMixin):
     region_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("region.id"), nullable=False)
     weight = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
     completed = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
-
-    courier = sqlalchemy.Table(
-        'courier_order',
-        SqlAlchemyBase.metadata,
-        sqlalchemy.Column('courier', sqlalchemy.Integer,
-                          sqlalchemy.ForeignKey('courier.courier_id')),
-        sqlalchemy.Column('order', sqlalchemy.Integer,
-                          sqlalchemy.ForeignKey('order.id'))
-    )
     batch = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("batch.id"), nullable=True)
+    complete_time = sqlalchemy.Column(sqlalchemy.DateTime, nullable=True)

@@ -20,6 +20,4 @@ class Courier(SqlAlchemyBase, SerializerMixin):
                            secondary="courier_region",
                            backref="courier")
 
-    orders = orm.relation("Order",
-                          secondary="courier_order",
-                          backref="order")
+

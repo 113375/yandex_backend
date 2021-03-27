@@ -96,6 +96,7 @@ def change_courier(courier_id):
         if 'courier_type' in data:
             courier.courier_type = db_sess.query(CourierType).filter(
                 CourierType.name == data['courier_type']).first().id
+            # TODO Сделать обнолвение заказов при изменении грузоподъемности
         if 'regions' in data:
             regions = courier.regions.copy()
             for j in regions:
@@ -107,9 +108,14 @@ def change_courier(courier_id):
                 add_region(data, db_sess)
                 region = db_sess.query(Region).filter(Region.name == i).first()
                 courier.regions.append(region)
+
+            # TODO Доделать обновление и удаление заказов при изменении регионов у курьера
+
         if 'working_hours' in data:
             db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).delete()
             add_courier_hours(data, db_sess, courier_id)
+
+            # TODO Сделать обновление заказов при изменении времени работы курьера
 
         hours = db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).all()
         hours = ["-".join(
@@ -207,7 +213,7 @@ def assign_orders():
     chosen_orders = []
     weight = 0
 
-    if db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first():
+    if db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).filter(Batch.finish_time == None).first():
         weight = db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first().all_weight
 
     for order in orders:
@@ -217,7 +223,8 @@ def assign_orders():
             chosen_orders.append(order)
             weight += order.weight
 
-    if not db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first():
+    if not db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).filter(
+            Batch.finish_time == None).first():
         db_sess.add(Batch(courier_id=courier.courier_id, assign_time=datetime.datetime.now(), all_weight=weight))
     batch = db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).first()
     for order in chosen_orders:
@@ -235,3 +242,47 @@ def assign_orders():
         "orders": chosen_orders_ids,
         "assign_time": batch.assign_time
     }))
+
+
+@blueprint.route('/orders/complete', methods=['POST'])
+def complete_orders():
+    if not request.json:
+        """В случае отсутствия параметров"""
+        return make_response(jsonify({'error': 'Empty request'}), 400)
+    if not all(key in request.json for key in
+               ['courier_id', 'order_id', 'complete_time']):
+        """Если не хватает ключей"""
+        return make_response(jsonify({'error': 'not enough parameters'}), 400)
+
+    db_sess = db_session.create_session()
+    data = request.json
+
+    if not db_sess.query(Courier).filter(Courier.courier_id == data['courier_id']).first():
+        """Если курьера нет в базе данных"""
+        return make_response(jsonify({'error': 'non-existent courier id'}), 400)
+
+    if not db_sess.query(Order).filter(data['order_id'] == Order.id).first():
+        """Если курьера нет в базе данных"""
+        return make_response(jsonify({'error': 'non-existent order id'}), 400)
+
+    order = db_sess.query(Order).filter(Order.id == data['order_id']).first()
+    if not order.batch:
+        return make_response(jsonify({'error': "nobody's order"}), 400)
+    batch = db_sess.query(Batch).filter(order.batch == Batch.id).first()
+    if batch.courier_id != data['courier_id']:
+        return make_response(jsonify({'error': "Order not from this courier"}), 400)
+
+    """Добавляем дату выполнения заказа"""
+    order.completed = True
+    data['complete_time'] = datetime.datetime.strptime(data['complete_time'], "%Y-%m-%dT%H:%M:%SZ")
+    order.complete_time = data['complete_time']
+
+    if len(db_sess.query(Order).filter(Order.batch == order.batch).filter(Order.completed == 0).all()) == 0:
+        """Если в партии уже больше нет заказов, то отмечаем ее выполненной"""
+        order.batch.finish_time = data['complete_time']
+
+    db_sess.commit()
+
+    return make_response(jsonify({
+        "order_id": data['order_id']
+    }), 200)
