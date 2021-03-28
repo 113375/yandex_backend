@@ -129,7 +129,7 @@ def change_courier(courier_id):
                                       "regions": [i.name for i in courier.regions],
                                       "working_hours": hours}), 200)
     else:
-        return make_response(jsonify({'error': 'Empty request'}), 400)
+        return make_response(jsonify({'error': 'not enough parameters'}), 400)
 
 
 @blueprint.route('/orders', methods=['POST'])
@@ -238,11 +238,11 @@ def assign_orders():
     if not chosen_orders_ids:
         return make_response(jsonify({
             "orders": chosen_orders_ids,
-        }))
+        }), 200)
     return make_response(jsonify({
         "orders": chosen_orders_ids,
         "assign_time": batch.assign_time
-    }))
+    }), 200)
 
 
 @blueprint.route('/orders/complete', methods=['POST'])
