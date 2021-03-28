@@ -1,7 +1,8 @@
 import flask
 from flask import request, jsonify, make_response
 
-from func import add_region, add_courier_hours, check_time, add_order_hours
+from func import add_region, add_courier_hours, check_time, add_order_hours, update_orders_after_changing_weight
+from func import update_orders_after_changing_regions
 from include import db_session
 from include.dataBase.courier import Courier
 from include.dataBase.courier_type import CourierType
@@ -96,7 +97,8 @@ def change_courier(courier_id):
         if 'courier_type' in data:
             courier.courier_type = db_sess.query(CourierType).filter(
                 CourierType.name == data['courier_type']).first().id
-            # TODO Сделать обнолвение заказов при изменении грузоподъемности
+            update_orders_after_changing_weight(db_sess, courier)
+
         if 'regions' in data:
             regions = courier.regions.copy()
             for j in regions:
@@ -108,8 +110,7 @@ def change_courier(courier_id):
                 add_region(data, db_sess)
                 region = db_sess.query(Region).filter(Region.name == i).first()
                 courier.regions.append(region)
-
-            # TODO Доделать обновление и удаление заказов при изменении регионов у курьера
+            update_orders_after_changing_regions(db_sess, courier)
 
         if 'working_hours' in data:
             db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).delete()
@@ -282,6 +283,7 @@ def complete_orders():
     if len(db_sess.query(Order).filter(Order.batch == order.batch).filter(Order.completed == 0).all()) == 0:
         """Если в партии уже больше нет заказов, то отмечаем ее выполненной"""
         batch.finish_time = data['complete_time']
+    batch.all_weight -= order.weight
 
     db_sess.commit()
 
