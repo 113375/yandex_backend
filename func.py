@@ -88,7 +88,7 @@ def update_orders_after_changing_weight(db_sess, courier):
 
 
 def update_orders_after_changing_regions(db_sess, courier):
-    """Обновляем послыки последней партии, чтобы все подходило по районам"""
+    """Обновляем посылки последней партии, чтобы все подходило по районам"""
     batch = db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).filter(
         Batch.finish_time == None).first()
     if not batch:
@@ -101,6 +101,27 @@ def update_orders_after_changing_regions(db_sess, courier):
     del_list = []  # Список районов, которых надо будет убрать
     for order in orders:
         if order.region_id not in regions:
+            del_list.append(order)
+
+    change_orders(batch, del_list, db_sess)
+
+
+def update_orders_after_changing_working_times_of_courier(db_sess, courier):
+    """Обновляем посылки последней партии после изменения времени работы курьера"""
+    batch = db_sess.query(Batch).filter(Batch.courier_id == courier.courier_id).filter(
+        Batch.finish_time == None).first()
+    if not batch:
+        return
+    orders = db_sess.query(Order).filter(Order.batch == batch.id).filter(Order.completed == 0).all()
+    if not orders:
+        return
+    del_list = []
+    courier_times = db_sess.query(CourierHours).filter(CourierHours.courier_id == courier.courier_id).all()
+
+    for order in orders:
+        order_times = db_sess.query(OrderHours).filter(OrderHours.order_id == order.id).all()
+
+        if not check_time(courier_times, order_times):
             del_list.append(order)
 
     change_orders(batch, del_list, db_sess)

@@ -2,7 +2,7 @@ import flask
 from flask import request, jsonify, make_response
 
 from func import add_region, add_courier_hours, check_time, add_order_hours, update_orders_after_changing_weight
-from func import update_orders_after_changing_regions
+from func import update_orders_after_changing_regions, update_orders_after_changing_working_times_of_courier
 from include import db_session
 from include.dataBase.courier import Courier
 from include.dataBase.courier_type import CourierType
@@ -116,7 +116,7 @@ def change_courier(courier_id):
             db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).delete()
             add_courier_hours(data, db_sess, courier_id)
 
-            # TODO Сделать обновление заказов при изменении времени работы курьера
+            update_orders_after_changing_working_times_of_courier(db_sess, courier)
 
         hours = db_sess.query(CourierHours).filter(CourierHours.courier_id == courier_id).all()
         hours = ["-".join(
